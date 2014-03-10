@@ -1,0 +1,33 @@
+{
+	"meeting": {
+		"title": "Test meeting",
+		"duration" : 60,
+		"date" : "2014-03-11"
+	},
+	"possibleTimeSlots": 3,
+	"attendees": [
+		{
+			"name": "Alex Brown",
+			"workingHoursFrom": "09:00",
+			"workingHoursTo": "17:30",
+			"timezone": "UTC",
+			"booked": [
+				{
+					"from": "2014-03-11 12:00",
+					"to": "2014-03-11 13:00"
+				},
+				{
+					"from": "2014-03-11 16:00",
+					"to": "2014-03-11 17:00"
+				}
+			]
+		},
+		{
+			"name": "John Doe",
+			"workingHoursFrom": "10:00",
+			"workingHoursTo": "19:00",
+			"timezone": "UTC",
+			"booked": []
+		}
+	]
+}
