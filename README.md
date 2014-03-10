@@ -2,14 +2,22 @@ TimeSlotFinder
 ==============
 
 Finding empty slot in calendar
+
+
 Problem:
 Arranging a meeting can be very hard task when you have to invite many people. Some of them already have their time-slots booked, others work in a different timezone. That's why we want to automate that process.
+
+
 Task:
 Write a code (in the language of your choice) which finds available time-slots for a meeting that everyone can attend.
+
+
 Input parameters:
 * list of attendees (every attendee can have different working hours and different time-slots already booked)
 * meeting length
-* (Integer) Number of possible time-slots that should be found by program * time-frame
+* (Integer) Number of possible time-slots that should be found by program time-frame
+
+
 Output:
 * list of available time-slots
 * information that it's not possible arrange meeting with everyone in the selected time-frame
