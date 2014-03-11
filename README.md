@@ -22,3 +22,10 @@ Output:
 * list of available time-slots
 * information that it's not possible arrange meeting with everyone in the selected time-frame
 * BONUS: if it's not possible to find time for all attendees, find a time-slot when maximum number of participants is able to attend and list who is available and who isn't on that time.
+
+How to use:
+==
+* Download project as archive or clone the repository
+* Go to ``./data`` and specify your input data in ``input.json`` file
+* Go to ``./src/``
+* run ``php -f index.php`` in your terminal
