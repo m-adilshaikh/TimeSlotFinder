@@ -22,24 +22,17 @@ class Attendee {
 	private $bookedTimeSlots = array();
 
 	/**
-	 * @var \DateTime
+	 * @var TimeSlot Represents attendee working hours
 	 */
-	private $workingHoursFrom;
-
-	/**
-	 * @var |DateTime
-	 */
-	private $workingHoursTo;
+	private $workingHours;
 
 	/**
 	 * Constructor
-	 * @param \DateTime $workingHoursFrom
-	 * @param \DateTime $workingHoursTo
+	 * @param TimeSlot $workingHours
 	 */
-	public function __construct(\DateTime $workingHoursFrom, \DateTime $workingHoursTo)
+	public function __construct(TimeSlot $workingHours)
 	{
-		$this->workingHoursFrom = $workingHoursFrom;
-		$this->workingHoursTo = $workingHoursTo;
+		$this->workingHours = $workingHours;
 	}
 
 	/**
@@ -85,20 +78,20 @@ class Attendee {
 
 	/**
 	 * Check whether the attendee can attend to the meeting
-	 * @param Meeting $meeting
 	 * @param \DateTime $dateTime Datetime in UTC time zone
 	 * @return bool TRUE - if yes, FALSE - if no
 	 */
-	public function canAttend(Meeting $meeting, \DateTime $dateTime)
+	public function canAttend(\DateTime $dateTime)
 	{
 		$tz = new \DateTimeZone('UTC');
 
 		// convert to UTC working hours
-		$workingHoursFrom = $this->workingHoursFrom->setTimezone($tz);
-		$workingHoursTo = $this->workingHoursTo->setTimezone($tz);
+		$workingHoursFrom = $this->workingHours->getDatetimeFrom($tz);
+		$workingHoursTo = $this->workingHours->getDatetimeTo($tz);
 
 		if ($dateTime->getTimestamp() >= $workingHoursFrom->getTimestamp()
-			&& $dateTime->getTimestamp() <= $workingHoursTo->getTimestamp()) {
+			&& $dateTime->getTimestamp() <= $workingHoursTo->getTimestamp()
+		) {
 			// check whether the datetime is booked
 			if (!$this->isDatetimeIsBooked($dateTime)) {
 				return true;
@@ -108,20 +101,12 @@ class Attendee {
 	}
 
 	/**
-	 * Getter for $workingHoursFrom property
-	 * @return \DateTime
+	 * Getter for $workingHours property
+	 * @return TimeSlot
 	 */
-	public function getWorkingHoursFrom()
+	public function getWorkingHours()
 	{
-		return $this->workingHoursFrom;
+		return $this->workingHours;
 	}
 
-	/**
-	 * Getter for $workingHoursTo property
-	 * @return \DateTime
-	 */
-	public function getWorkingHoursTo()
-	{
-		return $this->workingHoursTo;
-	}
 }

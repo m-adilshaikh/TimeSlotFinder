@@ -9,81 +9,142 @@
 namespace TimeSlotFinder\DataLoader;
 
 use TimeSlotFinder\Attendee;
+use TimeSlotFinder\DataLoader\Source\Fields;
+use TimeSlotFinder\DataLoader\Source\ISource;
 use TimeSlotFinder\Meeting;
-use TimeSlotFinder\Finder;
 use TimeSlotFinder\TimeSlot;
 
-class Loader {
+class Loader implements ILoader {
 
 	/**
-	 * Load input data from file in json format
-	 * @param string $filePath Path to json document
-	 *
-	 * @throws \InvalidArgumentException
-	 * @throws \RuntimeException
-	 *
-	 * @return Result
+	 * @var Data Store loaded data
 	 */
-	public function loadInputData($filePath)
+	private $data;
+
+	/**
+	 * Constructor
+	 */
+	public function __construct()
 	{
-		if (!is_file($filePath)) {
-			throw new \InvalidArgumentException("File $filePath not a file");
-		}
-		if (!is_readable($filePath)) {
-			throw new \RuntimeException("File $filePath should be a readable");
-		}
-		$input = json_decode(file_get_contents($filePath), true);
-		if ($input === null) {
-			throw new \RuntimeException('Input data is not valid');
-		}
-		$result = new Result();
-		// fetch data
-		//
-		// fetch possible time-slots that should be found
-		if (isset($input['possibleTimeSlots'])) {
-			$result->possibleTimeSlots = $input['possibleTimeSlots'];
-		}
-
-		// create meeting
-		$this->loadMeeting($input['meeting'], $result);
-
-		// load attendees
-		if (!isset($input['attendees'])) {
-			throw new \RuntimeException('You should specify attendees');
-		}
-		$this->loadAttendees($input['attendees'], $result);
-
-		return $result;
+		$this->data = new Data();
 	}
 
-	private function loadMeeting(array $meetingData, Result $result)
+	/**
+	 * Load data from source
+	 *
+	 * @param ISource $source
+	 */
+	public function loadInputData(ISource $source)
 	{
+		$this->loadPossibleTimeSlots($source);
+		$this->loadMeeting($source);
+		$this->loadAttendees($source);
+	}
+
+	/**
+	 * Getter for $data property
+	 * @return Data
+	 */
+	public function getData()
+	{
+		return $this->data;
+	}
+
+	/**
+	 * Load possible time-slots that should be found
+	 *
+	 * @throws \RuntimeException
+	 * @param ISource $source
+	 */
+	private function loadPossibleTimeSlots(ISource $source)
+	{
+		$input = $source->getData();
+		if (isset($input[Fields::POSSIBLE_TIME_SLOTS])) {
+			$number = (int)$input[Fields::POSSIBLE_TIME_SLOTS];
+			if ($number < 1) {
+				throw new \RuntimeException('Possible times-lots must be greater than 0');
+			}
+			if ($number > self::MAX_NUMBER_OF_POSSIBLE_TIME_SLOTS) {
+				$number = self::MAX_NUMBER_OF_POSSIBLE_TIME_SLOTS;
+			}
+			$this->data->setPossibleTimeSlots($number);
+		} else {
+			$this->data->setPossibleTimeSlots(self::DEFAULT_NUMBER_OF_POSSIBLE_TIME_SLOTS);
+		}
+	}
+
+	/**
+	 * Return default time zone
+	 * @return \DateTimeZone
+	 */
+	private static function getDefaultTimezone()
+	{
+		static $tz;
+		if ($tz === null) {
+			$tz = new \DateTimeZone(self::DEFAULT_TIME_ZONE);
+		}
+		return $tz;
+	}
+
+	/**
+	 * Load meeting's information
+	 *
+	 * @param ISource $source
+	 * @throws \RuntimeException
+	 */
+	private function loadMeeting(ISource $source)
+	{
+		$input = $source->getData();
+		if (!isset($input[Fields::MEETING])) {
+			throw new \RuntimeException('Invalid input data structure. Specify \'' . Fields::MEETING . '\' section');
+		}
+		$input = $input[Fields::MEETING];
 		$meeting = new Meeting();
-		foreach (array('title', 'duration', 'date') as $param) {
-			if (!isset($meetingData[$param])) {
+		foreach (array(Fields::MEETING_TITLE, Fields::MEETING_DURATION, Fields::MEETING_DATE, Fields::MEETING_TIMEZONE) as $param) {
+			if (!isset($input[$param])) {
 				throw new \RuntimeException('You should specify meeting ' . $param);
 			}
-			$meeting->{'set' . ucfirst($param)}($meetingData[$param]);
+			if ($param == Fields::MEETING_TIMEZONE) {
+				$meeting->setTimezone(new \DateTimeZone($input[$param]));
+			} else {
+				$meeting->{'set' . ucfirst($param)}($input[$param]);
+			}
 		}
-		$result->meeting = $meeting;
+		$this->data->setMeeting($meeting);
 	}
 
-	private function loadAttendees(array $attendees, Result $result)
+	/**
+	 * Load attendee information
+	 * @param ISource $source
+	 * @throws \RuntimeException
+	 */
+	private function loadAttendees(ISource $source)
 	{
-		foreach ($attendees as $attendee) {
-			$tz = isset($attendee['timezone']) ? new \DateTimeZone($attendee['timezone']) : new \DateTimeZone(Finder::DEFAULT_TIME_ZONE);
-			$workingHoursFrom = new \DateTime($attendee['workingHoursFrom'], $tz);
-			$workingHoursTo = new \DateTime($attendee['workingHoursTo'], $tz);
+		$input = $source->getData();
+		if (!isset($input[Fields::ATTENDEES])) {
+			throw new \RuntimeException('Invalid input data structure. Specify \'' . Fields::ATTENDEES . '\' section');
+		}
+		$attendees = array();
+		foreach ($input[Fields::ATTENDEES] as $attendee) {
+			$tz = isset($attendee[Fields::ATTENDEE_TIMEZONE])
+				? new \DateTimeZone($attendee[Fields::ATTENDEE_TIMEZONE])
+				: static::getDefaultTimezone();
 
-			$attendeeObject = new Attendee($workingHoursFrom, $workingHoursTo);
-			if (isset($attendee['booked'])) {
-				foreach ($attendee['booked'] as $booked) {
-					$dt1 = new \DateTime($booked['from'], $tz);
-					$dt2 = new \DateTime($booked['to'], $tz);
-					$attendeeObject->addBookedTimeSlot(new TimeSlot($dt1, $dt2));
+			$workingHoursFrom = new \DateTime($attendee[Fields::ATTENDEE_WORKING_HOURS_FROM], $tz);
+			$workingHoursTo = new \DateTime($attendee[Fields::ATTENDEE_WORKING_HOURS_TO], $tz);
+			$workingTimeSlot = new TimeSlot($workingHoursFrom, $workingHoursTo);
+			$attendeeObject = new Attendee($workingTimeSlot);
+
+			if (isset($attendee[Fields::ATTENDEE_BOOKED])) {
+				foreach ($attendee[Fields::ATTENDEE_BOOKED] as $booked) {
+					$dt1 = new \DateTime($booked[Fields::ATTENDEE_BOOKED_FROM], $tz);
+					$dt2 = new \DateTime($booked[Fields::ATTENDEE_BOOKED_TO], $tz);
+					$bookedTimeSlot = new TimeSlot($dt1, $dt2);
+					$attendeeObject->addBookedTimeSlot($bookedTimeSlot);
 				}
 			}
-			$result->attendees[] = $attendeeObject;
+			$attendees[] = $attendeeObject;
 		}
+		$this->data->setAttendees($attendees);
 	}
 } 

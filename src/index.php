@@ -7,14 +7,24 @@
  */
 require_once __DIR__ . DIRECTORY_SEPARATOR . 'autoload.php';
 
-$inputFile = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR  . 'data' . DIRECTORY_SEPARATOR . 'input.json';
-
-$finder = \TimeSlotFinder\Finder::getInstance();
+// path to file with input data
+$inputFile = __DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . 'data' . DIRECTORY_SEPARATOR . 'input.json';
 
 try {
-	$dataLoader = new \TimeSlotFinder\DataLoader\Loader();
-	$finder->find($dataLoader->loadInputData($inputFile));
+	$finder = \TimeSlotFinder\Application::createFinder();
+	$loader = \TimeSlotFinder\Application::createLoader();
+
+	// load input data
+	$source = new TimeSlotFinder\DataLoader\Source\JsonFile($inputFile);
+	$loader->loadInputData($source);
+	$finder->setData($loader->getData());
+
+	// run application
+	\TimeSlotFinder\Application::run($finder);
 
 } catch (\Exception $e) {
-	echo "ERROR: " . $e->getMessage() . "\nFILE:" . $e->getFile() . "\nLINE:" . $e->getLine() . "\n=================\n";
+	echo "ERROR: " . $e->getMessage()
+		. "\nFILE:" . $e->getFile()
+		. "\nLINE:" . $e->getLine()
+		. "\n=================\n";
 }

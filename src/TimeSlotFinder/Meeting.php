@@ -112,7 +112,7 @@ class Meeting {
 
 	/**
 	 * Getter for $timezone property
-	 * @return mixed
+	 * @return \DateTimeZone
 	 */
 	public function getTimezone()
 	{

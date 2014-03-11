@@ -48,19 +48,29 @@ class TimeSlot {
 
 	/**
 	 * Getter for $datetimeFrom property
+	 * @param \DateTimeZone $timeZone
 	 * @return \DateTime
 	 */
-	public function getDatetimeFrom()
+	public function getDatetimeFrom(\DateTimeZone $timeZone = null)
 	{
+		if ($timeZone !== null) {
+			$dateTimeFrom = clone $this->datetimeFrom;
+			return $dateTimeFrom->setTimezone($timeZone);
+		}
 		return $this->datetimeFrom;
 	}
 
 	/**
 	 * Getter for $datetimeTo property
+	 * @param \DateTimeZone $timeZone
 	 * @return \DateTime
 	 */
-	public function getDatetimeTo()
+	public function getDatetimeTo(\DateTimeZone $timeZone = null)
 	{
+		if ($timeZone !== null) {
+			$datetimeTo = clone $this->datetimeTo;
+			return $datetimeTo->setTimezone($timeZone);
+		}
 		return $this->datetimeTo;
 	}
 
@@ -78,8 +88,8 @@ class TimeSlot {
 	public function __toString()
 	{
 		return sprintf('%s - %s',
-			$this->datetimeFrom->format(\DateTime::RFC2822),
-			$this->datetimeTo->format(\DateTime::RFC2822)
+			$this->datetimeFrom->format(\DateTime::ISO8601),
+			$this->datetimeTo->format(\DateTime::ISO8601)
 		);
 	}
 } 

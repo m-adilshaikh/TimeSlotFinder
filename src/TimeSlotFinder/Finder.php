@@ -8,29 +8,16 @@
 
 namespace TimeSlotFinder;
 
-use TimeSlotFinder\DataLoader\Result as LoadedData;
+use TimeSlotFinder\DataLoader\Data;
+use TimeSlotFinder\Result\Embedded as FindResult;
 
 /**
  * Class Finder.
  * This class is Singleton
+ *
  * @package TimeSlotFinder
  */
 class Finder {
-
-	/**
-	 * The default number of possible time-slots that should be found.
-	 */
-	const DEFAULT_NUMBER_OF_POSSIBLE_TIME_SLOTS = 5;
-
-	/**
-	 * The maximal number of possible time-slots that should be found
-	 */
-	const MAX_NUMBER_OF_POSSIBLE_TIME_SLOTS = 100;
-
-	/**
-	 * The default time zone
-	 */
-	const DEFAULT_TIME_ZONE = 'UTC';
 
 	/**
 	 * Variable for storing instance
@@ -39,27 +26,25 @@ class Finder {
 	private static $instance;
 
 	/**
-	 * @var integer Number of possible time-slots that should be found
+	 * Loaded data
+	 *
+	 * @var Data
 	 */
-	private $numberOfPossibleTimeSlots;
+	private $data;
 
 	/**
-	 * @var Attendee[] Array of attendees for which we will find time-slots
+	 * The result of searching
+	 *
+	 * @var \TimeSlotFinder\Result\IResult
 	 */
-	private $attendees;
-
-	/**
-	 * @var Meeting Represent the meeting for that attendees would be found
-	 */
-	private $meeting;
+	private $result;
 
 	/**
 	 * Disable create instance via new word
 	 */
 	private function __construct()
 	{
-		date_default_timezone_set(self::DEFAULT_TIME_ZONE);
-		$this->numberOfPossibleTimeSlots = self::DEFAULT_NUMBER_OF_POSSIBLE_TIME_SLOTS;
+
 	}
 
 	/**
@@ -86,33 +71,54 @@ class Finder {
 
 	}
 
-	private function setResult(LoadedData $result)
+	/**
+	 * Return interval in that empty time-slots will be finding
+	 *
+	 * @return \DateInterval
+	 */
+	private function getInterval()
 	{
-		$this->numberOfPossibleTimeSlots =
-			$result->possibleTimeSlots > self::MAX_NUMBER_OF_POSSIBLE_TIME_SLOTS
-				? self::MAX_NUMBER_OF_POSSIBLE_TIME_SLOTS
-				: $result->possibleTimeSlots;
-		$this->meeting = $result->meeting;
-		$this->attendees = $result->attendees;
+		$intervalSpec = sprintf('PT%dM', $this->data->getMeeting()->getDuration());
+		return new \DateInterval($intervalSpec);
+	}
+
+	/**
+	 * @param \DateInterval $interval
+	 * @return \DatePeriod
+	 */
+	private function getPeriod(\DateInterval $interval)
+	{
+		return new \DatePeriod($this->calculateStartDateForPeriod(), $interval, $this->calculateEndDateForPeriod());
+	}
+
+	/**
+	 * @return \DateTimeZone
+	 */
+	private static function getBaseTomeZone()
+	{
+		static $tz;
+		if ($tz === null) {
+			$tz = new \DateTimeZone('UTC');
+		}
+		return $tz;
 	}
 
 	/**
 	 * Return the minimal date from that period will be begin
 	 * @return \DateTime
 	 */
-	private function getStartDateForPeriod()
+	private function calculateStartDateForPeriod()
 	{
-		if (count($this->attendees) == 1) {
-			$attendee = $this->attendees[0];
-			$dt = $attendee->getWorkingHoursFrom();
-			$dt->setTimezone(new \DateTimeZone('UTC'));
+		$attendees = $this->data->getAttendees();
+		$attendeesCount = count($attendees);
+		if ($attendeesCount == 1) {
+			$dt = $attendees[0]->getWorkingHours()->getDatetimeFrom(static::getBaseTomeZone());
 			return $dt;
 		}
-		$returnDateTime = $this->attendees[0]->getWorkingHoursFrom()->setTimezone(new \DateTimeZone('UTC'));
-		$attendeesCount = count($this->attendees);
+		$returnDateTime = $attendees[0]->getWorkingHours()->getDatetimeFrom(static::getBaseTomeZone());
 		for ($i = 1; $i < $attendeesCount; $i++) {
-			$attendee = $this->attendees[$i];
-			$dt = $attendee->getWorkingHoursFrom()->setTimezone(new \DateTimeZone('UTC'));
+			$attendee = $attendees[$i];
+			$dt = $attendee->getWorkingHours()->getDatetimeFrom(static::getBaseTomeZone());
 			$diff = $dt->diff($returnDateTime);
 			if (!$diff->invert) {
 				$returnDateTime = $dt;
@@ -125,25 +131,35 @@ class Finder {
 	 * Return the maximal date from that period will be begin
 	 * @return \DateTime
 	 */
-	private function getEndDateForPeriod()
+	private function calculateEndDateForPeriod()
 	{
-		if (count($this->attendees) == 1) {
-			$attendee = $this->attendees[0];
-			$dt = $attendee->getWorkingHoursTo();
-			$dt->setTimezone(new \DateTimeZone(\DateTimeZone::UTC));
-			return $dt;
+		$attendees = $this->data->getAttendees();
+		$attendeesCount = count($attendees);
+		if ($attendeesCount == 1) {
+			$dt = $attendees[0]->getWorkingHours()->getDatetimeTo(static::getBaseTomeZone());
+			return $dt->modify('+1 hour');
 		}
-		$returnDateTime = $this->attendees[0]->getWorkingHoursTo()->setTimezone(new \DateTimeZone('UTC'));
-		$attendeesCount = count($this->attendees);
+		$returnDateTime = $attendees[0]->getWorkingHours()->getDatetimeTo(static::getBaseTomeZone());
 		for ($i = 1; $i < $attendeesCount; $i++) {
-			$attendee = $this->attendees[$i];
-			$dt = $attendee->getWorkingHoursTo()->setTimezone(new \DateTimeZone('UTC'));
+			$attendee = $attendees[$i];
+			$dt = $attendee->getWorkingHours()->getDatetimeTo(static::getBaseTomeZone());
 			$diff = $dt->diff($returnDateTime);
 			if ($diff->invert) {
 				$returnDateTime = $dt;
 			}
 		}
-		return $returnDateTime;
+		return $returnDateTime->modify('+1 hour');
+	}
+
+	/**
+	 * Create result instance
+	 *
+	 * @param TimeSlot[] $timeSlots
+	 * @return FindResult
+	 */
+	private function createResult(array $timeSlots)
+	{
+		$this->result = new FindResult($timeSlots, $this->data->getMeeting()->getTimezone());
 	}
 
 	/**
@@ -158,38 +174,58 @@ class Finder {
 		return static::$instance;
 	}
 
-	public function find(LoadedData $result)
+	/**
+	 * Set loaded data that was be loaded via ISource
+	 *
+	 * @param Data $data
+	 */
+	public function setData(Data $data)
 	{
-		$this->setResult($result);
+		$this->data = $data;
+	}
 
-		// create interval for finding
-		$intervalSpec = sprintf('PT%dM', $this->meeting->getDuration());
-		$interval = new \DateInterval($intervalSpec);
-		$period = new \DatePeriod($this->getStartDateForPeriod(), $interval, $this->getEndDateForPeriod()->modify('+1 hour'));
+	/**
+	 *
+	 * @return Result\IResult
+	 */
+	public function getResult()
+	{
+		return $this->result;
+	}
 
+	/**
+	 * Find empty time-slots
+	 *
+	 * @throws \RuntimeException
+	 */
+	public function find()
+	{
+		if (empty($this->data)) {
+			throw new \RuntimeException('Empty data');
+		}
+
+		$interval = $this->getInterval();
+		$period = $this->getPeriod($interval);
+
+		// finding
 		$foundTimeSlots = array();
 		$i = 0;
-		foreach ($period as $dt) {
+		foreach ($period as $datetime) {
 			$canAttend = array();
-			foreach ($this->attendees as $attendee) {
-				if ($attendee->canAttend($this->meeting, $dt)) {
+			foreach ($this->data->getAttendees() as $attendee) {
+				if ($attendee->canAttend($datetime)) {
 					$canAttend[] = $attendee;
 				}
 			}
-			if (count($canAttend) == count($this->attendees)) {
+			if (count($canAttend) == count($this->data->getAttendees())) {
 				// we find datetime
-				$foundTimeSlots[] = TimeSlot::createFromDatetime($dt, $interval);
+				$foundTimeSlots[] = TimeSlot::createFromDatetime($datetime, $interval);
 				$i++;
-				if ($i >= $this->numberOfPossibleTimeSlots) {
+				if ($i >= $this->data->getPossibleTimeSlots()) {
 					break;
 				}
 			}
 		}
-		if ($foundTimeSlots === array()) {
-			echo "Not found";
-		}
-		foreach ($foundTimeSlots as $slot) {
-			echo $slot . "\n";
-		}
+		$this->createResult($foundTimeSlots);
 	}
 } 
