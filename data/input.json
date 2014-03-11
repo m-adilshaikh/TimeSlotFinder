@@ -2,7 +2,8 @@
 	"meeting": {
 		"title": "Test meeting",
 		"duration" : 60,
-		"date" : "2014-03-11"
+		"date" : "2014-03-11",
+		"timezone" : "UTC"
 	},
 	"possibleTimeSlots": 3,
 	"attendees": [

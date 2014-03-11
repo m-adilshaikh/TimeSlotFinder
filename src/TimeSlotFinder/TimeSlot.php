@@ -22,26 +22,27 @@ class TimeSlot {
 	private $datetimeTo;
 
 	/**
-	 * Disable creating instance via constructor
+	 * Constructor
+	 * @param \DateTime $dateTimeFrom
+	 * @param \DateTime $dateTimeTo
 	 */
-	private function __construct(\DateTime $dateTimeFrom, \DateTime $dateTimeTo)
+	public function __construct(\DateTime $dateTimeFrom, \DateTime $dateTimeTo)
 	{
 		$this->datetimeFrom = $dateTimeFrom;
 		$this->datetimeTo = $dateTimeTo;
 	}
 
 	/**
-	 * Creating instance form unix timestamps
-	 * @param integer $timestampFrom
-	 * @param integer $timestampTo
+	 * Create instance from datetime and interval
+	 * @param \DateTime $dateTime
+	 * @param \DateInterval $interval
 	 * @return TimeSlot
 	 */
-	public static function createFromTimestamps($timestampFrom, $timestampTo)
+	public static function createFromDatetime(\DateTime $dateTime, \DateInterval $interval)
 	{
-		$self = new self(
-			new \DateTime(date('c', $timestampFrom)),
-			new \DateTime(date('c', $timestampTo))
-		);
+		$dateTimeTo = clone $dateTime;
+		$dateTimeTo->add($interval);
+		$self = new self($dateTime, $dateTimeTo);
 		return $self;
 	}
 
@@ -63,11 +64,22 @@ class TimeSlot {
 		return $this->datetimeTo;
 	}
 
+	/**
+	 * Check whether the time-slot contains the specified $dateTime
+	 * @param \DateTime $dateTime
+	 * @return bool
+	 */
+	public function contains(\DateTime $dateTime)
+	{
+		return $dateTime->getTimestamp() >= $this->datetimeFrom->getTimestamp() &&
+		$dateTime->getTimestamp() <= $this->datetimeTo->getTimestamp();
+	}
+
 	public function __toString()
 	{
 		return sprintf('%s - %s',
-			$this->datetimeFrom->format(\DateTime::ISO8601),
-			$this->datetimeTo->format(\DateTime::ISO8601)
+			$this->datetimeFrom->format(\DateTime::RFC2822),
+			$this->datetimeTo->format(\DateTime::RFC2822)
 		);
 	}
 } 

@@ -14,7 +14,7 @@ class Meeting {
 	/**
 	 * The minimal duration of meeting in minutes
 	 */
-	const MIN_DURATION = 15;
+	const MIN_DURATION = 30;
 
 	/**
 	 * The maximal duration of meeting in minutes
@@ -35,6 +35,11 @@ class Meeting {
 	 * @var string The date in format Y-m-d when the meeting will be held
 	 */
 	private $date;
+
+	/**
+	 * @var |DateTimeZone The time zone of meeting event
+	 */
+	private $timezone;
 
 	/**
 	 * Setter for $duration property
@@ -96,5 +101,22 @@ class Meeting {
 		return $this->date;
 	}
 
+	/**
+	 * Setter for $timezone property
+	 * @param \DateTimeZone $timeZone
+	 */
+	public function setTimezone(\DateTimeZone $timeZone)
+	{
+		$this->timezone = $timeZone;
+	}
+
+	/**
+	 * Getter for $timezone property
+	 * @return mixed
+	 */
+	public function getTimezone()
+	{
+		return $this->timezone;
+	}
 
 } 

@@ -8,8 +8,10 @@
 
 namespace TimeSlotFinder\DataLoader;
 
-use \TimeSlotFinder\Attendee;
-use \TimeSlotFinder\Meeting;
+use TimeSlotFinder\Attendee;
+use TimeSlotFinder\Meeting;
+use TimeSlotFinder\Finder;
+use TimeSlotFinder\TimeSlot;
 
 class Loader {
 
@@ -69,10 +71,18 @@ class Loader {
 	private function loadAttendees(array $attendees, Result $result)
 	{
 		foreach ($attendees as $attendee) {
-			$tz = isset($attendee['timezone']) ? new \DateTimeZone($attendee['timezone']) : new \DateTimeZone(self::DEFAULT_TIME_ZONE);
+			$tz = isset($attendee['timezone']) ? new \DateTimeZone($attendee['timezone']) : new \DateTimeZone(Finder::DEFAULT_TIME_ZONE);
 			$workingHoursFrom = new \DateTime($attendee['workingHoursFrom'], $tz);
 			$workingHoursTo = new \DateTime($attendee['workingHoursTo'], $tz);
+
 			$attendeeObject = new Attendee($workingHoursFrom, $workingHoursTo);
+			if (isset($attendee['booked'])) {
+				foreach ($attendee['booked'] as $booked) {
+					$dt1 = new \DateTime($booked['from'], $tz);
+					$dt2 = new \DateTime($booked['to'], $tz);
+					$attendeeObject->addBookedTimeSlot(new TimeSlot($dt1, $dt2));
+				}
+			}
 			$result->attendees[] = $attendeeObject;
 		}
 	}
