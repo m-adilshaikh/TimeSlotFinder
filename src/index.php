@@ -19,6 +19,8 @@ try {
 	$loader->loadInputData($source);
 	$finder->setData($loader->getData());
 
+	//print_r($finder->calculateStartDateForPeriod());
+
 	// run application
 	\TimeSlotFinder\Application::run($finder);
 

@@ -124,6 +124,10 @@ class Finder {
 				$returnDateTime = $dt;
 			}
 		}
+
+		//print_r($attendees[0]);
+
+
 		return $returnDateTime;
 	}
 
@@ -206,6 +210,9 @@ class Finder {
 
 		$interval = $this->getInterval();
 		$period = $this->getPeriod($interval);
+
+		//echo 'Period - ';
+		//print_r($period);
 
 		// finding
 		$foundTimeSlots = array();

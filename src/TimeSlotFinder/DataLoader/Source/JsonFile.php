@@ -53,6 +53,7 @@ class JsonFile implements ISource {
 		if ($input === null) {
 			throw new \RuntimeException('Input data is not valid');
 		}
+
 		$this->loadedData = $input;
 		return $this->loadedData;
 	}

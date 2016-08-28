@@ -124,14 +124,17 @@ class Loader implements ILoader {
 		if (!isset($input[Fields::ATTENDEES])) {
 			throw new \RuntimeException('Invalid input data structure. Specify \'' . Fields::ATTENDEES . '\' section');
 		}
+
+		$meeting_date = $input[Fields::MEETING][Fields::MEETING_DATE];
+
 		$attendees = array();
 		foreach ($input[Fields::ATTENDEES] as $attendee) {
 			$tz = isset($attendee[Fields::ATTENDEE_TIMEZONE])
 				? new \DateTimeZone($attendee[Fields::ATTENDEE_TIMEZONE])
 				: static::getDefaultTimezone();
 
-			$workingHoursFrom = new \DateTime($attendee[Fields::ATTENDEE_WORKING_HOURS_FROM], $tz);
-			$workingHoursTo = new \DateTime($attendee[Fields::ATTENDEE_WORKING_HOURS_TO], $tz);
+			$workingHoursFrom = new \DateTime($meeting_date.'T'.$attendee[Fields::ATTENDEE_WORKING_HOURS_FROM], $tz);
+			$workingHoursTo = new \DateTime($meeting_date.'T'.$attendee[Fields::ATTENDEE_WORKING_HOURS_TO], $tz);
 			$workingTimeSlot = new TimeSlot($workingHoursFrom, $workingHoursTo);
 			$attendeeObject = new Attendee($workingTimeSlot);
 
